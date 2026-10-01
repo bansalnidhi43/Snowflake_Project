@@ -1,0 +1,61 @@
+//
+USE DATABASE CLOUDHILLDB;
+
+CREATE OR REPLACE SCHEMA PIPES;
+
+CREATE OR REPLACE STORAGE INTEGRATION gcp_integration
+    TYPE = EXTERNAL_STAGE
+    STORAGE_PROVIDER = GCS
+    ENABLED = TRUE
+    STORAGE_ALLOWED_LOCATIONS = ('gcs://snowflake_bucket02');
+
+
+DESC STORAGE INTEGRATION gcp_integration;
+
+    
+CREATE OR REPLACE FILE FORMAT  csv_fileformat
+    TYPE = 'csv'
+    FIELD_DELIMITER = ','
+    SKIP_HEADER = 0
+    ;
+
+CREATE OR REPLACE STAGE gcp_stage
+    STORAGE_INTEGRATION = gcp_integration
+    URL = 'gcs://snowflake_bucket02/csv'
+    FILE_FORMAT = csv_fileformat;
+
+
+LIST @CLOUDHILLDB.PIPES.GCP_STAGE;
+
+SELECT $1, $2, $3, $4, $5, $6
+FROM 
+@CLOUDHILLDB.PIPES.GCP_STAGE;
+
+
+
+CREATE OR REPLACE TABLE TEST_DB01.PUBLIC.EMPLOYEE
+(id number(20),
+first_name varchar(30),
+last_name varchar(30),
+email varchar(30),
+location varchar(30),
+department varchar(30));
+
+
+COPY INTO TEST_DB01.PUBLIC.EMPLOYEE
+FROM @CLOUDHILLDB.PIPES.gcp_stage
+ON_ERROR = CONTINUE;
+
+
+COPY INTO @CLOUDHILLDB.PIPES.gcp_stage/csvput
+FROM TEST_DB01.PUBLIC.EMPLOYEE
+overwrite = TRUE
+HEADER = TRUE;
+
+CREATE OR REPLACE pipe CLOUDHILLDB.PIPES.employee_pipe
+    auto_ingest = TRUE
+    AS
+    COPY INTO TEST_DB01.PUBLIC.EMPLOYEE
+    FROM @CLOUDHILLDB.PIPES.gcp_stage;
+
+
