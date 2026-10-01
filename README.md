@@ -10,6 +10,8 @@ Live Streaming Data: i. Snowflake + Python using snowflake.snowpipe.streaming
                      ii. Dynamic Tables
 
 Streams and Tasks: i. INSERT, UPDATE, DELETE
-                    ii. SCHEDULE using Minutes/Hours or CRON
+                   ii. SCHEDULE using Minutes/Hours or CRON
+                   iii. Conditional Scheduling
+                   iv. Scheduling Stored Procedures
 
 Query Optimization: Query Profile, CTEs, Window Functions, Clustering
