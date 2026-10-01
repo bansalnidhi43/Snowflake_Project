@@ -6,6 +6,10 @@ Snowpipe - i. Storage/Integration Notification Object
           iii. External Stage Object 
           iv. Snowpipe Object
 
-Streams and Tasks:
+Live Streaming Data: i. Snowflake + Python using snowflake.snowpipe.streaming 
+                     ii. Dynamic Tables
 
-Query Optimization:
+Streams and Tasks: i. INSERT, UPDATE, DELETE
+                    ii. SCHEDULE using Minutes/Hours or CRON
+
+Query Optimization: Query Profile, CTEs, Window Functions, Clustering
