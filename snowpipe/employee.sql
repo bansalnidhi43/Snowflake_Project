@@ -1,61 +1,80 @@
-//
-USE DATABASE CLOUDHILLDB;
+//Create Database
+CREATE OR REPLACE DATABASE SNOWPIPE_TEST_DB;
 
-CREATE OR REPLACE SCHEMA PIPES;
 
+//Create Schema for Storage Integration
+CREATE OR REPLACE SCHEMA ST_INTEGRATION;
+
+
+//Create Storage Integration
 CREATE OR REPLACE STORAGE INTEGRATION gcp_integration
     TYPE = EXTERNAL_STAGE
-    STORAGE_PROVIDER = GCS
+    STORAGE_PROVIDER = 'GCS'
     ENABLED = TRUE
-    STORAGE_ALLOWED_LOCATIONS = ('gcs://snowflake_bucket02');
-
+    STORAGE_ALLOWED_LOCATIONS = ('gcs://snowflake_bckt02/csv/snowpipe/');
 
 DESC STORAGE INTEGRATION gcp_integration;
 
-    
-CREATE OR REPLACE FILE FORMAT  csv_fileformat
-    TYPE = 'csv'
-    FIELD_DELIMITER = ','
-    SKIP_HEADER = 0
-    ;
 
-CREATE OR REPLACE STAGE gcp_stage
+//projects/snowflake-project-510103/topics/snowflake_topic02
+//Create Schema for Notification Integration
+CREATE OR REPLACE SCHEMA NOTIFY_INTEGRATION;
+
+//Create Notification Integration
+CREATE OR REPLACE NOTIFICATION INTEGRATION gcp_notif_integration
+    ENABLED = TRUE
+    TYPE = QUEUE
+    NOTIFICATION_PROVIDER = GCP_PUBSUB
+    GCP_PUBSUB_SUBSCRIPTION_NAME = 'projects/snowflake-project-510103/subscriptions/snowflake_topic02-sub';
+
+DESC NOTIFICATION INTEGRATION gcp_notif_integration;
+
+CREATE OR REPLACE SCHEMA file_formats;
+
+// Create file format object
+CREATE OR REPLACE file format SNOWPIPE_TEST_DB.file_formats.csv_fileformat
+    type = csv
+    field_delimiter = ','
+    skip_header = 1
+    null_if = ('NULL','null')
+    empty_field_as_null = TRUE;
+
+
+CREATE OR REPLACE SCHEMA EXT_STAGE;
+
+CREATE OR REPLACE STAGE SNOWPIPE_TEST_DB.EXT_STAGE.GCP_STAGE
+    URL = 'gcs://snowflake_bckt02/csv/snowpipe/'
     STORAGE_INTEGRATION = gcp_integration
-    URL = 'gcs://snowflake_bucket02/csv'
-    FILE_FORMAT = csv_fileformat;
+    FILE_FORMAT = SNOWPIPE_TEST_DB.file_formats.csv_fileformat
+    directory = (enable = True);
+
+LIST @SNOWPIPE_TEST_DB.EXT_STAGE.GCP_STAGE;
+
+CREATE OR REPLACE SCHEMA STAGED_TABLE;
 
 
-LIST @CLOUDHILLDB.PIPES.GCP_STAGE;
+// Create table first
+CREATE OR REPLACE TABLE employees (
+  id INT,
+  first_name STRING,
+  last_name STRING,
+  email STRING,
+  location STRING,
+  department STRING
+  );
 
-SELECT $1, $2, $3, $4, $5, $6
-FROM 
-@CLOUDHILLDB.PIPES.GCP_STAGE;
-
-
-
-CREATE OR REPLACE TABLE TEST_DB01.PUBLIC.EMPLOYEE
-(id number(20),
-first_name varchar(30),
-last_name varchar(30),
-email varchar(30),
-location varchar(30),
-department varchar(30));
+GRANT USAGE ON INTEGRATION GCP_NOTIF_INTEGRATION to ROLE ACCOUNTADMIN;
 
 
-COPY INTO TEST_DB01.PUBLIC.EMPLOYEE
-FROM @CLOUDHILLDB.PIPES.gcp_stage
-ON_ERROR = CONTINUE;
+CREATE OR REPLACE SCHEMA PIPES;
 
-
-COPY INTO @CLOUDHILLDB.PIPES.gcp_stage/csvput
-FROM TEST_DB01.PUBLIC.EMPLOYEE
-overwrite = TRUE
-HEADER = TRUE;
-
-CREATE OR REPLACE pipe CLOUDHILLDB.PIPES.employee_pipe
-    auto_ingest = TRUE
+CREATE OR REPLACE PIPE employee_pipe
+    AUTO_INGEST = TRUE
+    INTEGRATION = 'GCP_NOTIF_INTEGRATION'
     AS
-    COPY INTO TEST_DB01.PUBLIC.EMPLOYEE
-    FROM @CLOUDHILLDB.PIPES.gcp_stage;
+    COPY INTO SNOWPIPE_TEST_DB.STAGED_TABLE.EMPLOYEES
+    FROM @SNOWPIPE_TEST_DB.EXT_STAGE.GCP_STAGE ;
 
+ALTER PIPE employee_pipe REFRESH;
 
+ALTER PIPE SNOWPIPE_TEST_DB.NOTIFY_INTEGRATION.EMPLOYEE_PIPE SET PIPE_EXECUTION_PAUSED= TRUE;
