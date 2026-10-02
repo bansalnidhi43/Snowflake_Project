@@ -5,6 +5,8 @@ Snowpipe - i. Storage/Integration Notification Object
           ii. File Format Object 
           iii. External Stage Object 
           iv. Snowpipe Object
+          v. Error Handling (using ON_ERROR)
+          vi. Monitoring(using COPY_HISTORY() and VALIDATE_PIPE_LOAD())
 
 Live Streaming Data: i. Snowflake + Python using snowflake.snowpipe.streaming 
                      ii. Dynamic Tables
