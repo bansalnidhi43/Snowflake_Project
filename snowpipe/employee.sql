@@ -62,7 +62,8 @@ CREATE OR REPLACE PIPE employee_pipe
     INTEGRATION = 'GCP_NOTIF_INTEGRATION'
     AS
     COPY INTO snowpipe_ingest_db.ingest.employees
-    FROM @snowpipe_ingest_db.ingest.gcp_stage ;
+    FROM @snowpipe_ingest_db.ingest.gcp_stage 
+    ON_ERROR = SKIP_FILE;
 
 ALTER PIPE employee_pipe REFRESH;
 
