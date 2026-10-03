@@ -1,0 +1,102 @@
+CREATE OR REPLACE DATABASE STREAM_DB;
+
+CREATE OR REPLACE TABLE sales_raw_staging(
+  id varchar,
+  product varchar,
+  price varchar,
+  amount varchar,
+  store_id varchar
+);
+
+-- insert values 
+insert into sales_raw_staging 
+    values
+        (12345,'Banana',1.99,1,1),
+        (23456,'Lemon',0.99,1,1),
+        (34567,'Apple',1.79,1,2),
+        (45678,'Orange Juice',1.89,1,2),
+        (56789,'Cereals',5.98,2,1);  
+
+CREATE OR REPLACE TABLE store_table(
+  store_id number,
+  location varchar,
+  employees number
+);
+
+INSERT INTO store_table VALUES
+    (1,'Chicago',33), 
+    (2,'London',12);
+
+
+CREATE OR REPLACE TABLE sales_final_table(
+  id int,
+  product varchar,
+  price number,
+  amount int,
+  store_id int,
+  location varchar,
+  employees int
+);
+
+
+INSERT INTO sales_final_table
+SELECT A.*,  B.location, B.employees
+FROM sales_raw_staging A
+JOIN store_table B
+ON A.store_id = B.store_id;
+
+
+//CREATE a Stream Object
+
+CREATE OR REPLACE STREAM sales_stream on table sales_raw_staging;
+
+SHOW streams;
+
+insert into sales_raw_staging 
+    values
+        (67890,'Pineapple',2.99,1,1),
+        (78901,'Guava',1.50,1,1),
+        (89012,'Rasberry',3.49,1,2);
+
+SELECT * FROM sales_stream;
+
+UPDATE sales_raw_staging SET product = 'Mango Shake'
+    where id = 5;
+
+CREATE OR REPLACE TASK sales_task
+    WAREHOUSE = COMPUTE_WH,
+    SCHEDULE = 'USING CRON 0 0 * * * UTC' //Everyday at 12:00 AM 
+    WHEN SYSTEM$STREAM_HAS_DATA('sales_stream')
+    AS
+    MERGE INTO sales_final_table F
+    USING (
+        SELECT STRE.*, ST.LOCATION, ST.EMPLOYEES  FROM sales_stream STRE
+        JOIN store_table ST
+        ON STRE.store_id = ST.STORE_ID
+         )S
+    ON F.id = S.id
+    WHEN MATCHED
+        AND METADATA$ISUPDATE = FALSE
+        AND METADATA$ACTION = 'DELETE'
+        then delete
+    WHEN MATCHED
+        AND METADATA$ISUPDATE = TRUE
+        AND METADATA$ACTION = 'UPDATE'
+        then update 
+        SET F.product = S.product,
+            F.price = S.price,
+            F.amount = S.amount,
+            F.store_id = S.store_id
+
+    WHEN NOT MATCHED
+        AND METADATA$ISUPDATE = FALSE
+        AND METADATA$ACTION = 'INSERT'
+        then INSERT
+        (id, product, price, amount, store_id, location, employees)
+         values
+        (s.id, s.product, s.price, s.amount,s.store_id, s.location, s.employees);
+        
+        
+SHOW TASKS;    
+
+
