@@ -7,6 +7,7 @@ Snowpipe - i. Storage/Integration Notification Object
           iv. Snowpipe Object
           v. Error Handling (using ON_ERROR)
           vi. Monitoring(using COPY_HISTORY() and VALIDATE_PIPE_LOAD())
+          v. On failure/Partial Load , notify the Developer/Client.
 
 Live Streaming Data: i. Snowflake + Python using snowflake.snowpipe.streaming 
                      ii. Dynamic Tables
