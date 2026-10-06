@@ -1,13 +1,13 @@
 //Create Database
-CREATE OR REPLACE DATABASE snowpipe_ingest_db;
+USE DATABASE snowpipe_ingest_db;
 
 
 //Create Schema 
-CREATE OR REPLACE SCHEMA ingest;
+CREATE SCHEMA IF NOT EXISTSingest;
 
 
 //Create Storage Integration
-CREATE OR REPLACE STORAGE INTEGRATION gcp_integration
+CREATE STORAGE INTEGRATION IF NOT EXISTS gcp_integration
     TYPE = EXTERNAL_STAGE
     STORAGE_PROVIDER = 'GCS'
     ENABLED = TRUE
@@ -16,7 +16,7 @@ CREATE OR REPLACE STORAGE INTEGRATION gcp_integration
 DESC STORAGE INTEGRATION gcp_integration;
 
 //Create Notification Integration
-CREATE OR REPLACE NOTIFICATION INTEGRATION gcp_notif_integration
+CREATE NOTIFICATION INTEGRATION IF NOT EXISTS gcp_notif_integration
     ENABLED = TRUE
     TYPE = QUEUE
     NOTIFICATION_PROVIDER = GCP_PUBSUB
@@ -26,7 +26,7 @@ DESC NOTIFICATION INTEGRATION gcp_notif_integration;
 
 
 // Create file format object
-CREATE OR REPLACE file format csv_fileformat
+CREATE file format IF NOT EXISTS csv_fileformat
     type = csv
     field_delimiter = ','
     skip_header = 1
@@ -35,7 +35,7 @@ CREATE OR REPLACE file format csv_fileformat
 
 
 //Create External Stage Object
-CREATE OR REPLACE STAGE gcp_stage
+CREATE STAGE IF NOT EXISTS gcp_stage
     URL = 'gcs://snowflake_bckt02/csv/snowpipe/'
     STORAGE_INTEGRATION = gcp_integration
     FILE_FORMAT = snowpipe_ingest_db.ingest.csv_fileformat
@@ -44,7 +44,7 @@ CREATE OR REPLACE STAGE gcp_stage
 LIST @snowpipe_ingest_db.ingest.gcp_stage;
 
 // Create table first
-CREATE OR REPLACE TABLE employees (
+CREATE TABLE IF NOT EXISTS employees (
   id INT,
   first_name STRING,
   last_name STRING,
@@ -57,7 +57,7 @@ CREATE OR REPLACE TABLE employees (
 GRANT USAGE ON INTEGRATION gcp_notif_integration to ROLE ACCOUNTADMIN;
 
 //Create Snowpipe Object
-CREATE OR REPLACE PIPE employee_pipe
+CREATE PIPE IF NOT EXISTS employee_pipe
     AUTO_INGEST = TRUE
     INTEGRATION = 'GCP_NOTIF_INTEGRATION'
     AS
@@ -68,3 +68,39 @@ CREATE OR REPLACE PIPE employee_pipe
 ALTER PIPE employee_pipe REFRESH;
 
 //ALTER PIPE snowpipe_ingest_db.ingest.employee_pipe SET PIPE_EXECUTION_PAUSED= TRUE;
+
+//Create EMAIL Notification Integration
+CREATE NOTIFICATION INTEGRATION IF NOT EXISTS my_email_int
+    TYPE = EMAIL
+    ENABLED = TRUE
+    ALLOWED_RECIPIENTS = ('bansal.nidhi43@gmail.com');
+
+//To test if the Email Integration is working fine
+//CALL SYSTEM$SEND_EMAIL('my_email_int', 'bansal.nidhi43@gmail.com', 'Test', 'Hello from Snowflake');
+
+
+//Create the Automatic Alert on Load Failure or Partial Load
+CREATE ALERT IF NOT EXISTS pipe_failure_alert
+    WAREHOUSE = 'COMPUTE_WH'
+    SCHEDULE = '5 MINUTES'
+ IF (EXISTS (
+    SELECT 1
+    FROM TABLE(INFORMATION_SCHEMA.COPY_HISTORY(
+           TABLE_NAME => 'OUR_FIRST_DB.PUBLIC.EMPLOYEES',
+           START_TIME => DATEADD(hour, -2, CURRENT_TIMESTAMP())))
+    WHERE STATUS IN ('Load failed','Partially_loaded')
+      AND LAST_LOAD_TIME > SNOWFLAKE.ALERT.LAST_SUCCESSFUL_SCHEDULED_TIME()
+  ))
+THEN
+CALL SYSTEM$SEND_EMAIL(
+    'my_email_int',
+    'bansal.nidhi43@gmail.com',
+    'Snowpipe load failure',
+    'A file was skipped or partially loaded. Check COPY_HISTORY.'
+);
+
+ALTER ALERT pipe_failure_alert RESUME; //Alert is created in SUSPEND Mode
+//ALTER ALERT pipe_failure_alert SUSPEND; 
+
+
+        
