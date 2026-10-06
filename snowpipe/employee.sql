@@ -3,7 +3,7 @@ USE DATABASE snowpipe_ingest_db;
 
 
 //Create Schema 
-CREATE SCHEMA IF NOT EXISTSingest;
+CREATE SCHEMA IF NOT EXISTS ingest;
 
 
 //Create Storage Integration
