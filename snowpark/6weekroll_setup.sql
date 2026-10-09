@@ -25,8 +25,8 @@ CREATE NOTIFICATION INTEGRATION IF NOT EXISTS email_alert_integration
 
 DESC NOTIFICATION INTEGRATION email_alert_integration;
 
-//Test if Email Setup is done properly
-//CALL SYSTEM$SEND_EMAIL('email_alert_integration', 'ng1492000@gmail.com', 'TEST', 'Hello from Snowflake');
+//Test
+CALL SYSTEM$SEND_EMAIL('email_alert_integration', 'ng1492000@gmail.com', 'TEST', 'Hello from Snowflake');
 
 //Create CSV file Format
 CREATE FILE FORMAT IF NOT EXISTS csv_file_format
@@ -38,7 +38,7 @@ CREATE FILE FORMAT IF NOT EXISTS csv_file_format
     ;
 
 //Create Target Table
-CREATE TABLE IF NOT EXISTS SALES_ROLLING (
+CREATE TABLE IF NOT EXISTS dev_db.snowpark_lab.sales_rolling(
     ORDER_ID    NUMBER,
     PRODUCT     STRING,
     QTY         NUMBER,
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS SALES_ROLLING (
 );
 
 //CREATE Transient table TABLE
-CREATE TRANSIENT TABLE IF NOT EXISTS dev_db.public.staged_sales_table(
+CREATE TRANSIENT TABLE IF NOT EXISTS dev_db.snowpark_lab.staged_sales_table(
     ORDER_ID NUMBER,
     PRODUCT  STRING,
     QTY      NUMBER,
@@ -61,7 +61,7 @@ CREATE TRANSIENT TABLE IF NOT EXISTS dev_db.public.staged_sales_table(
 )DATA_RETENTION_TIME_IN_DAYS = 0;
 
 //Create Table for logs and analysis
-CREATE TABLE IF NOT EXISTS PIPELINE_LOG (
+CREATE TABLE IF NOT EXISTS dev_db.snowpark_lab.pipeline_log (
     RUN_ID        STRING,
     LOG_TS        TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
     PIPELINE      STRING,
@@ -88,4 +88,4 @@ LIST @gcs_csv_ext_stage;
 //ON_ERROR = 'SKIP_FILE_10%';
 
 
-SELECT COUNT(*) FROM dev_db.public.staged_sales_table;
+SELECT COUNT(*) FROM dev_db.snowpark_lab.staged_sales_table;
