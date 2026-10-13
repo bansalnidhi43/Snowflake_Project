@@ -45,7 +45,6 @@ CREATE TABLE IF NOT EXISTS dev_db.snowpark_lab.sales_rolling(
     PRICE       FLOAT,
     FISCAL_WEEK NUMBER,
     ORDER_FISCALWEEK STRING,
-    WEEK_START  DATE,            -- Monday of the week the file belongs to
     SOURCE_FILE STRING,
     LOAD_TS     TIMESTAMP_NTZ
 );
@@ -88,4 +87,6 @@ LIST @gcs_csv_ext_stage;
 //ON_ERROR = 'SKIP_FILE_10%';
 
 
-SELECT COUNT(*) FROM dev_db.snowpark_lab.staged_sales_table;
+//SELECT COUNT(*) FROM dev_db.snowpark_lab.staged_sales_table;
+
+
